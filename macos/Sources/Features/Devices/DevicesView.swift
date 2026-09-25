@@ -38,6 +38,7 @@ struct DevicesView: View {
             }
             .navigationTitle("Devices")
             .toolbar {
+                // Groups: SDK updates | manage (delete, SDK) | create. Keeps Delete away from New Device.
                 if !updates.updates.isEmpty {
                     ToolbarItem {
                         Button {
@@ -51,17 +52,24 @@ struct DevicesView: View {
                         }
                         .help("SDK updates are available")
                     }
+                    if #available(macOS 26, *) {
+                        ToolbarSpacer(.fixed)
+                    }
                 }
-                ToolbarItem {
+                ToolbarItemGroup {
                     Button("Delete", systemImage: "trash") { requestDeletion(of: selection) }
                         .disabled(deletable(selection).isEmpty)
                         .help("Delete the selected emulators")
+                    Button("Android SDK", systemImage: "wrench.and.screwdriver") { showingSDK = true }
+                        .help("Android SDK details and updates")
+                }
+                if #available(macOS 26, *) {
+                    ToolbarSpacer(.fixed)
                 }
                 ToolbarItem {
                     Button("New Device", systemImage: "plus") { showNewDevice() }
-                }
-                ToolbarItem {
-                    Button("Android SDK", systemImage: "wrench.and.screwdriver") { showingSDK = true }
+                        .buttonStyle(.borderedProminent)
+                        .help("Create a new emulator")
                 }
             }
             .sheet(isPresented: $showingSDK) {
@@ -124,6 +132,13 @@ extension DevicesView {
         }
     }
 
+    /// Opens the AVD's folder in Finder with config.ini selected, so it can be opened in any editor.
+    private func revealConfig(of avd: AVD) {
+        let config = avd.directory.appending(path: "config.ini")
+        let exists = FileManager.default.fileExists(atPath: config.path(percentEncoded: false))
+        NSWorkspace.shared.activateFileViewerSelecting([exists ? config : avd.directory])
+    }
+
     private func showNewDevice() {
         newDevice = NewDeviceModel(status: status, existingNames: Set(devices.devices.map(\.id)))
     }
@@ -170,7 +185,8 @@ extension DevicesView {
             }
             Button("Edit…") { edit(avd) }
                 .disabled(state != .stopped)
-            Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([avd.directory]) }
+            Button("Show Emulator in Finder") { NSWorkspace.shared.activateFileViewerSelecting([avd.directory]) }
+            Button("Show config.ini in Finder") { revealConfig(of: avd) }
             Divider()
         }
         if !avds.isEmpty {
