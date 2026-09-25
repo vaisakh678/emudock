@@ -42,10 +42,46 @@ struct SDKManagerTests {
     }
 }
 
+struct SDKUpdatesTests {
+    @Test func parsesAvailableUpdatesSection() {
+        let lines = [
+            "Available Packages:",
+            "system-images;android-36;google_apis;arm64-v8a | 7 | Google APIs ARM 64 v8a System Image",
+            "Available Updates:",
+            "ID | Installed | Available",
+            "------- | ------- | -------",
+            "emulator | 36.5.10 | 37.1.11",
+            "platform-tools | 37.0.0 | 37.0.1",
+        ]
+        #expect(SDKManager.updates(inList: lines) == [
+            PackageUpdate(path: "emulator", installed: "36.5.10", available: "37.1.11"),
+            PackageUpdate(path: "platform-tools", installed: "37.0.0", available: "37.0.1"),
+        ])
+        #expect(SDKManager.updates(inList: ["Installed packages:"]).isEmpty)
+        #expect(!SDKManager.packagePaths(inList: lines).contains("ID"))
+    }
+
+    @Test func comparesVersionsNumerically() {
+        #expect(PackageUpdate.isNewer("23.0", than: "12.0"))
+        #expect(PackageUpdate.isNewer("37.1.11", than: "36.5.10"))
+        #expect(PackageUpdate.isNewer("37.0.1", than: "37.0"))
+        #expect(!PackageUpdate.isNewer("23.0", than: "23.0"))
+        #expect(!PackageUpdate.isNewer("9.0", than: "12.0"))
+    }
+
+    @Test func namesEssentialPackages() {
+        let tools = PackageUpdate(path: "cmdline-tools;latest", installed: "12.0", available: "23.0")
+        let image = PackageUpdate(path: "system-images;android-36;google_apis_playstore;arm64-v8a", installed: "4", available: "7")
+        #expect(tools.isEssential && tools.displayName == "Command-line tools")
+        #expect(!image.isEssential && image.displayName == "Android 16 (API 36) · Google Play")
+    }
+}
+
 struct CommandLineToolsTests {
     private let manifest = Data("""
     <sdk:sdk-repository xmlns:sdk="http://schemas.android.com/sdk/android/repo/repository2/03">
       <remotePackage path="cmdline-tools;latest">
+        <revision><major>23</major><minor>0</minor></revision>
         <archives>
           <archive>
             <complete><checksum type="sha1">aaa</checksum><url>commandlinetools-linux-1_latest.zip</url></complete>
@@ -68,6 +104,7 @@ struct CommandLineToolsTests {
         let arm = try #require(try CommandLineTools.latestArchive(inRepository: manifest, arch: "aarch64"))
         #expect(arm.url.absoluteString == "https://dl.google.com/android/repository/commandlinetools-mac_arm64-1_latest.zip")
         #expect(arm.sha1 == "ccc")
+        #expect(arm.version == "23.0")
         #expect(try CommandLineTools.latestArchive(inRepository: manifest, arch: "x64")?.sha1 == "bbb")
     }
 }

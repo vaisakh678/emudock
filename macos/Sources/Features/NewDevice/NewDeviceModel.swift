@@ -15,13 +15,15 @@ final class NewDeviceModel: Identifiable {
     private let sdkManager: SDKManager
     private let existingNames: Set<String>
 
-    private(set) var presets: [HardwarePreset] = []
+    private(set) var popularHardware: [HardwareProfile] = []
+    private(set) var otherHardware: [HardwareProfile] = []
+    var showAllHardware = false
     private(set) var images: [SystemImage]
     private(set) var isLoadingDownloads = true
     private(set) var phase = Phase.editing
     var showAllImageTypes = false
 
-    var preset: HardwarePreset? { didSet { suggestName() } }
+    var hardware: HardwareProfile? { didSet { suggestName() } }
     var image: SystemImage? { didSet { suggestName() } }
     var name = ""
     /// Once the user edits the name, stop overwriting it with suggestions.
@@ -50,7 +52,7 @@ final class NewDeviceModel: Identifiable {
     }
 
     var canCreate: Bool {
-        phase == .editing && preset != nil && image != nil && !name.trimmingCharacters(in: .whitespaces).isEmpty
+        phase == .editing && hardware != nil && image != nil && !name.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     var isWorking: Bool {
@@ -58,13 +60,15 @@ final class NewDeviceModel: Identifiable {
     }
 
     func load() async {
-        async let deviceIDs = try? avdManager.deviceIDs()
+        async let profiles = try? avdManager.hardwareProfiles()
         async let available = try? sdkManager.listPackages()
 
-        let known = await deviceIDs ?? []
-        presets = HardwarePreset.all.filter { known.contains($0.id) }
-        if presets.isEmpty { presets = HardwarePreset.all.filter { $0.id == "medium_phone" } }
-        preset = presets.first
+        let grouped = HardwareProfile.grouped(await profiles ?? [])
+        popularHardware = grouped.popular.isEmpty
+            ? [HardwareProfile(id: "medium_phone", name: "Medium Phone", oem: "Generic")]
+            : grouped.popular
+        otherHardware = grouped.others
+        hardware = popularHardware.first
 
         let installed = Set(images.map(\.path))
         let downloads = (await available ?? [])
@@ -77,7 +81,7 @@ final class NewDeviceModel: Identifiable {
     }
 
     func create(onSuccess: @escaping @MainActor () async -> Void) {
-        guard canCreate, let preset, let image else { return }
+        guard canCreate, let hardware, let image else { return }
         let displayName = name.trimmingCharacters(in: .whitespaces)
         let avdName = uniqueAVDName(for: displayName)
         phase = .working(fraction: nil, detail: "Starting")
@@ -93,7 +97,7 @@ final class NewDeviceModel: Identifiable {
                     }
                 }
                 phase = .working(fraction: nil, detail: "Creating \(displayName)")
-                try await avdManager.create(name: avdName, image: image.path, device: preset.id)
+                try await avdManager.create(name: avdName, image: image.path, device: hardware.id)
 
                 let config = AVDCatalog.avdHome().appending(path: "\(avdName).avd/config.ini")
                 try AVDManager.updateConfig(at: config, with: [
@@ -102,6 +106,9 @@ final class NewDeviceModel: Identifiable {
                     "hw.keyboard": "yes",
                     "hw.gpu.enabled": "yes",
                     "hw.gpu.mode": "auto",
+                    // Hardware profiles default to as little as 1 core; recommended values are much faster.
+                    "hw.ramSize": String(HostResources.recommendedRAM),
+                    "hw.cpu.ncore": String(HostResources.recommendedCores),
                 ])
                 await onSuccess()
             } catch is CancellationError {
@@ -121,8 +128,8 @@ final class NewDeviceModel: Identifiable {
     }
 
     private func suggestName() {
-        guard !nameEdited, let preset else { return }
-        name = image.map { "\(preset.name) API \($0.apiLevel)" } ?? preset.name
+        guard !nameEdited, let hardware else { return }
+        name = image.map { "\(hardware.name) API \($0.apiLevel)" } ?? hardware.name
     }
 
     private func uniqueAVDName(for displayName: String) -> String {

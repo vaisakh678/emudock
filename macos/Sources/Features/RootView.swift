@@ -3,6 +3,7 @@ import SwiftUI
 struct RootView: View {
     @Environment(SDKStatusModel.self) private var sdk
     @Environment(DevicesModel.self) private var devices
+    @Environment(UpdatesModel.self) private var updates
 
     var body: some View {
         Group {
@@ -20,6 +21,7 @@ struct RootView: View {
         }
         .onChange(of: sdk.status, initial: true) { _, status in
             devices.configure(with: status)
+            if let status { updates.checkIfDue(status: status) }
         }
         .task { devices.startPolling() }
     }

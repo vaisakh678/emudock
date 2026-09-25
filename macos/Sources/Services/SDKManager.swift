@@ -37,8 +37,18 @@ struct SDKManager: Sendable {
 
     /// Every package path sdkmanager lists, installed or available.
     func listPackages() async throws -> [String] {
-        let lines = try await ProcessRunner.run(executable, arguments: [sdkRootArgument, "--list"], environment: environment)
-        return Self.packagePaths(inList: lines)
+        Self.packagePaths(inList: try await list())
+    }
+
+    /// Raw `sdkmanager --list` output lines.
+    func list() async throws -> [String] {
+        try await ProcessRunner.run(executable, arguments: [sdkRootArgument, "--list"], environment: environment)
+    }
+
+    /// The command-line tools version running this sdkmanager, e.g. "12.0".
+    func version() async throws -> String? {
+        let lines = try await ProcessRunner.run(executable, arguments: ["--version"], environment: environment)
+        return lines.last { $0.wholeMatch(of: /\d+(\.\d+)*/) != nil }
     }
 
     // MARK: - Parsing
@@ -50,13 +60,30 @@ struct SDKManager: Sendable {
         return (min(percent, 100) / 100, message)
     }
 
+    /// Rows of the "Available Updates:" table: package path, installed and available versions.
+    static func updates(inList lines: [String]) -> [PackageUpdate] {
+        guard let start = lines.firstIndex(where: { $0.hasPrefix("Available Updates:") }) else { return [] }
+        var updates: [PackageUpdate] = []
+        for line in lines[lines.index(after: start)...] {
+            let columns = line.split(separator: "|").map { $0.trimmingCharacters(in: .whitespaces) }
+            if columns.count != 3 {
+                // A line that isn't a table row ends the section.
+                if line.hasSuffix(":") { break }
+                continue
+            }
+            guard columns[0] != "ID", !columns[0].hasPrefix("---") else { continue }
+            updates.append(PackageUpdate(path: columns[0], installed: columns[1], available: columns[2]))
+        }
+        return updates
+    }
+
     /// Extracts the first column of `sdkmanager --list` table rows.
     static func packagePaths(inList lines: [String]) -> [String] {
         lines.compactMap { line in
             let columns = line.split(separator: "|", omittingEmptySubsequences: false)
             guard columns.count >= 3 else { return nil }
             let path = columns[0].trimmingCharacters(in: .whitespaces)
-            guard !path.isEmpty, path != "Path", !path.hasPrefix("---") else { return nil }
+            guard !path.isEmpty, path != "Path", path != "ID", !path.hasPrefix("---") else { return nil }
             return path
         }
     }
