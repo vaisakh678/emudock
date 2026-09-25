@@ -47,8 +47,16 @@ struct SDKInfoView: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("System images").font(.headline)
-                ForEach(status.systemImages, id: \.self) { image in
-                    Text(image).font(.callout.monospaced()).foregroundStyle(.secondary)
+                ForEach(status.systemImages, id: \.self) { path in
+                    if let image = SystemImage(path: path, isInstalled: true) {
+                        HStack(spacing: 6) {
+                            Text(image.title)
+                            Text("· \(image.tagDisplay)").foregroundStyle(.secondary)
+                        }
+                        .help(path)
+                    } else {
+                        Text(path).font(.callout.monospaced()).foregroundStyle(.secondary)
+                    }
                 }
             }
 

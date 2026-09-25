@@ -97,3 +97,23 @@ struct HardwareProfileTests {
         #expect(Set(grouped.popular.map(\.id)).isDisjoint(with: grouped.others.map(\.id)))
     }
 }
+
+@MainActor
+struct NewDeviceModelTests {
+    private func status() -> AndroidSDK.Status {
+        AndroidSDK.Status(
+            root: URL(filePath: "/sdk"), javaHome: URL(filePath: "/java"),
+            sdkmanager: URL(filePath: "/sdk/sdkmanager"), avdmanager: URL(filePath: "/sdk/avdmanager"),
+            emulator: URL(filePath: "/sdk/emulator"), adb: URL(filePath: "/sdk/adb"),
+            systemImages: ["system-images;android-36;google_apis_playstore;\(Host.systemImageABI)"]
+        )
+    }
+
+    @Test func canCreateOnceHardwareAndImageAreChosen() throws {
+        let model = try #require(NewDeviceModel(status: status(), existingNames: []))
+        #expect(model.image != nil)
+        model.hardware = HardwareProfile(id: "pixel_10", name: "Pixel 10", oem: "Google")
+        #expect(model.name == "Pixel 10 API 36")
+        #expect(model.canCreate)
+    }
+}
