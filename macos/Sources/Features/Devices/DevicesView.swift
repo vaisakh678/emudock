@@ -28,6 +28,7 @@ struct DevicesView: View {
                 } else {
                     List(devices.devices, selection: $selection) { avd in
                         DeviceRow(avd: avd) { edit(avd) }
+                            .listRowSeparator(.hidden)
                     }
                     .listStyle(.inset)
                     .contextMenu(forSelectionType: String.self) { ids in
@@ -75,6 +76,9 @@ struct DevicesView: View {
             .sheet(isPresented: $showingSDK) {
                 SDKInfoView(status: status)
             }
+            #if DEBUG
+            .task { await openSheetFromLaunchArgument() }
+            #endif
             .sheet(item: $editing) { model in
                 EditDeviceView(model: model)
             }
@@ -138,6 +142,23 @@ extension DevicesView {
         let exists = FileManager.default.fileExists(atPath: config.path(percentEncoded: false))
         NSWorkspace.shared.activateFileViewerSelecting([exists ? config : avd.directory])
     }
+
+    #if DEBUG
+    /// For README screenshots: `-EmuDockOpenSheet new-device|edit|sdk` opens that sheet on launch.
+    private func openSheetFromLaunchArgument() async {
+        // The device list loads asynchronously; wait briefly so "edit" has a device to open.
+        for _ in 0..<50 where devices.devices.isEmpty {
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+        switch UserDefaults.standard.string(forKey: "EmuDockOpenSheet") {
+        case "new-device": showNewDevice()
+        case "edit":
+            if let stopped = devices.devices.first(where: { devices.state(of: $0) == .stopped }) { edit(stopped) }
+        case "sdk": showingSDK = true
+        default: break
+        }
+    }
+    #endif
 
     private func showNewDevice() {
         newDevice = NewDeviceModel(status: status, existingNames: Set(devices.devices.map(\.id)))
@@ -232,18 +253,25 @@ private struct DeviceRow: View {
             Group {
                 switch state {
                 case .stopped:
-                    Button("Launch", systemImage: "play.fill") { devices.launch(avd) }
+                    actionButton("Launch", systemImage: "play.fill") { devices.launch(avd) }
                 case .starting, .running:
-                    Button("Stop", systemImage: "stop.fill") { devices.stop(avd) }
+                    actionButton("Stop", systemImage: "stop.fill") { devices.stop(avd) }
                         .disabled(devices.running[avd.id] == nil)
                 case .stopping, .deleting:
-                    Button("Stop", systemImage: "stop.fill") {}
+                    actionButton("Stop", systemImage: "stop.fill") {}
                         .disabled(true)
                 }
             }
-            .frame(width: 96)
         }
         .padding(.vertical, 8)
+    }
+}
+
+/// Launch and Stop share one width so the column lines up across rows.
+private func actionButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+    Button(action: action) {
+        Label(title, systemImage: systemImage)
+            .frame(width: 76)
     }
 }
 

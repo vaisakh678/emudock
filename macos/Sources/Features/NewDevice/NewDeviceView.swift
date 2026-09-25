@@ -27,7 +27,7 @@ struct NewDeviceView: View {
             footer
                 .padding(16)
         }
-        .frame(width: 620, height: 640)
+        .frame(width: 620, height: 700)
         .task { await model.load() }
     }
 
@@ -64,7 +64,7 @@ struct NewDeviceView: View {
     }
 
     private func hardwareGrid(_ profiles: [HardwareProfile]) -> some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 130), spacing: 10)], spacing: 10) {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 100), spacing: 8)], spacing: 8) {
             ForEach(profiles) { profile in
                 HardwareCard(profile: profile, isSelected: model.hardware == profile)
                     .onTapGesture { model.hardware = profile }
@@ -117,7 +117,14 @@ struct NewDeviceView: View {
             Text("Name").font(.headline)
             TextField("Name", text: Binding(
                 get: { model.name },
-                set: { model.name = $0; model.nameEdited = true }
+                // Only a real change counts as the user's own name. The field can write back its
+                // current (empty) value when the sheet appears, which would otherwise stop name
+                // suggestions and leave Create disabled.
+                set: { newValue in
+                    guard newValue != model.name else { return }
+                    model.name = newValue
+                    model.nameEdited = true
+                }
             ))
             .textFieldStyle(.roundedBorder)
         }
@@ -180,20 +187,21 @@ private struct HardwareCard: View {
     let isSelected: Bool
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 5) {
             Image(systemName: profile.symbolName)
-                .font(.system(size: 26))
-                .frame(height: 32)
+                .font(.system(size: 18))
+                .frame(height: 22)
             Text(profile.name)
-                .font(.callout)
+                .font(.caption)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
+                .minimumScaleFactor(0.9)
         }
-        .frame(maxWidth: .infinity, minHeight: 84)
-        .padding(8)
-        .background(isSelected ? AnyShapeStyle(.tint.opacity(0.15)) : AnyShapeStyle(.background.secondary), in: .rect(cornerRadius: 10))
+        .frame(maxWidth: .infinity, minHeight: 58)
+        .padding(6)
+        .background(isSelected ? AnyShapeStyle(.tint.opacity(0.15)) : AnyShapeStyle(.background.secondary), in: .rect(cornerRadius: 8))
         .overlay {
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: 8)
                 .strokeBorder(isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.separator), lineWidth: isSelected ? 2 : 1)
         }
         .contentShape(.rect)

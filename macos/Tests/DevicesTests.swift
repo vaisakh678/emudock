@@ -32,6 +32,14 @@ struct AVDCatalogTests {
         #expect(avd.symbolName == "smartphone")
     }
 
+    @Test func tagComesFromImageFolder() {
+        #expect(AVDCatalog.imageTagDisplay(["image.sysdir.1": "system-images/android-37.0/google_apis_playstore_ps16k/arm64-v8a/"])
+            == "Google Play · 16 KB pages")
+        #expect(AVDCatalog.imageTagDisplay(["image.sysdir.1": "system-images/android-33/google_apis/arm64-v8a/"])
+            == "Google APIs (rootable)")
+        #expect(AVDCatalog.imageTagDisplay([:]) == nil)
+    }
+
     @Test func fallsBackWhenConfigIsMissing() throws {
         let home = try temporaryFolder()
         defer { try? FileManager.default.removeItem(at: home) }

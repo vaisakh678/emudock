@@ -13,6 +13,7 @@ struct RootView: View {
                 } else {
                     SetupView(status: status)
                         .padding(32)
+                        .frame(minHeight: 560)
                 }
             } else {
                 ProgressView("Looking for the Android SDK…")

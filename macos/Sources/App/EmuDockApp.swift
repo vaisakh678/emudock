@@ -14,7 +14,7 @@ struct EmuDockApp: App {
                 .environment(sdk)
                 .environment(devices)
                 .environment(updates)
-                .frame(minWidth: 720, minHeight: 560)
+                .frame(minWidth: 720, minHeight: 360)
                 .task { await sdk.refresh() }
         }
 

@@ -37,6 +37,7 @@ struct AVD: Identifiable, Sendable, Equatable {
     var symbolName: String {
         let device = deviceName?.lowercased() ?? ""
         if device.contains("tablet") { return "ipad.landscape" }
+        if device.contains("fold") { return "rectangle.portrait.split.2x1" }
         if device.contains("tv") { return "tv" }
         if device.contains("wear") || device.contains("watch") { return "applewatch" }
         if device.contains("automotive") { return "car" }
@@ -86,10 +87,19 @@ enum AVDCatalog {
             displayName: config["avd.ini.displayname"] ?? name.replacing("_", with: " "),
             directory: directory,
             apiLevel: target.flatMap { $0.hasPrefix("android-") ? String($0.dropFirst("android-".count)) : nil },
-            tagDisplay: config["tag.display"],
+            tagDisplay: imageTagDisplay(config) ?? config["tag.display"],
             deviceName: config["hw.device.name"],
             screenSize: screenSize
         )
+    }
+
+    /// "Google Play · 16 KB pages" etc., from the system image folder, e.g.
+    /// `system-images/android-37.0/google_apis_playstore_ps16k/arm64-v8a/`. The config's own
+    /// `tag.display` is inconsistent ("Google APIs PlayStore") and omits the 16 KB variant.
+    static func imageTagDisplay(_ config: [String: String]) -> String? {
+        guard let sysdir = config["image.sysdir.1"] else { return nil }
+        let path = sysdir.split(separator: "/").joined(separator: ";")
+        return SystemImage(path: path, isInstalled: true)?.tagDisplay
     }
 
     static func parseINI(_ text: String) -> [String: String] {
