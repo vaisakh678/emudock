@@ -1,0 +1,70 @@
+name: EmuDock
+
+options:
+  bundleIdPrefix: com.cortexlumora
+  # Stamps LastUpgradeCheck so Xcode doesn't offer "Update to recommended
+  # settings" on every open of the generated project.
+  xcodeVersion: "27.0"
+  deploymentTarget:
+    macOS: "15.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_STRICT_CONCURRENCY: complete
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    DEAD_CODE_STRIPPING: YES
+    DEVELOPMENT_TEAM: KTJUU8D53Q
+
+targets:
+  EmuDock:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources
+      - path: Resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.cortexlumora.emudock
+        PRODUCT_NAME: EmuDock
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: EmuDock
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.developer-tools
+        INFOPLIST_KEY_NSHumanReadableCopyright: "© 2026 Cortexlumora Private Limited"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        # Not sandboxed: EmuDock runs sdkmanager/avdmanager/emulator from the
+        # user's Android SDK. Distributed via Developer ID + notarization.
+        CODE_SIGN_ENTITLEMENTS: Resources/EmuDock.entitlements
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_HARDENED_RUNTIME: YES
+
+  EmuDockTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests
+    dependencies:
+      - target: EmuDock
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.cortexlumora.emudock.tests
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_STYLE: Automatic
+
+schemes:
+  EmuDock:
+    build:
+      targets:
+        EmuDock: all
+        EmuDockTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - EmuDockTests
