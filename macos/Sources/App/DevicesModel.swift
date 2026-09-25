@@ -6,7 +6,7 @@ import Observation
 @Observable
 final class DevicesModel {
     enum DeviceState: Equatable {
-        case stopped, starting, running, stopping
+        case stopped, starting, running, stopping, deleting
 
         var title: String {
             switch self {
@@ -14,7 +14,12 @@ final class DevicesModel {
             case .starting: "Starting…"
             case .running: "Running"
             case .stopping: "Stopping…"
+            case .deleting: "Deleting…"
             }
+        }
+
+        var isBusy: Bool {
+            self == .starting || self == .stopping || self == .deleting
         }
     }
 
@@ -23,15 +28,19 @@ final class DevicesModel {
     private var booted: Set<String> = []
     private var launching: Set<String> = []
     private var stopping: Set<String> = []
+    private var deleting: Set<String> = []
     private var tools: EmulatorTools?
+    private var avdManager: AVDManager?
     private var pollTask: Task<Void, Never>?
     var errorMessage: String?
 
     func configure(with status: AndroidSDK.Status?) {
         tools = status.flatMap(EmulatorTools.init(status:))
+        avdManager = status.flatMap(AVDManager.init(status:))
     }
 
     func state(of avd: AVD) -> DeviceState {
+        if deleting.contains(avd.id) { return .deleting }
         if stopping.contains(avd.id) { return .stopping }
         if running[avd.id] != nil { return booted.contains(avd.id) ? .running : .starting }
         return launching.contains(avd.id) ? .starting : .stopped
@@ -88,6 +97,41 @@ final class DevicesModel {
             try? await Task.sleep(for: .seconds(60))
             launching.remove(avd.id)
         }
+    }
+
+    /// Deletes stopped emulators one by one; running ones are left alone.
+    func delete(_ avds: [AVD]) {
+        guard let avdManager else { return }
+        let targets = avds.filter { state(of: $0) == .stopped }
+        guard !targets.isEmpty else { return }
+        deleting.formUnion(targets.map(\.id))
+        Task {
+            var failures: [String] = []
+            for avd in targets {
+                do {
+                    try await avdManager.delete(name: avd.id)
+                } catch {
+                    failures.append("\(avd.displayName): \(error.localizedDescription)")
+                }
+            }
+            await refresh()
+            deleting.subtract(targets.map(\.id))
+            if !failures.isEmpty {
+                errorMessage = "Couldn't delete:\n\n" + failures.joined(separator: "\n\n")
+            }
+        }
+    }
+
+    /// Changes the display name only; the AVD id used by `emulator -avd` stays the same.
+    func rename(_ avd: AVD, to name: String) {
+        let cleaned = AVDSettings.cleanName(name)
+        guard !cleaned.isEmpty, cleaned != avd.displayName else { return }
+        do {
+            try AVDManager.updateConfig(at: avd.directory.appending(path: "config.ini"), with: ["avd.ini.displayname": cleaned])
+        } catch {
+            errorMessage = "Couldn't rename \(avd.displayName).\n\n\(error.localizedDescription)"
+        }
+        Task { await refresh() }
     }
 
     func stop(_ avd: AVD) {

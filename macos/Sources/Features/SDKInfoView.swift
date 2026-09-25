@@ -7,6 +7,26 @@ struct SDKInfoView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
+        VStack(spacing: 0) {
+            ScrollView {
+                details
+                    .padding(28)
+            }
+            Divider()
+            HStack {
+                Button("Check Again") {
+                    Task { await sdk.refresh() }
+                }
+                Spacer()
+                Button("Done") { dismiss() }
+                    .keyboardShortcut(.defaultAction)
+            }
+            .padding(16)
+        }
+        .frame(width: 640, height: 640)
+    }
+
+    private var details: some View {
         VStack(alignment: .leading, spacing: 20) {
             Label("Android SDK ready", systemImage: "checkmark.seal.fill")
                 .font(.title2.bold())
@@ -32,17 +52,10 @@ struct SDKInfoView: View {
                 }
             }
 
-            HStack {
-                Button("Check Again") {
-                    Task { await sdk.refresh() }
-                }
-                Spacer()
-                Button("Done") { dismiss() }
-                    .keyboardShortcut(.defaultAction)
-            }
+            Divider()
+            UpdatesSection(status: status)
         }
-        .padding(28)
-        .frame(width: 640)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

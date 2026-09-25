@@ -59,3 +59,41 @@ struct AVDManagerTests {
             == "avd.ini.displayname=Pixel 9\nhw.keyboard=yes\nhw.ramSize=2048\nhw.gpu.mode=auto\n")
     }
 }
+
+struct HardwareProfileTests {
+    /// Real `avdmanager list device` output from command-line tools 23, trimmed like ProcessRunner does.
+    private func fixture() throws -> [String] {
+        let url = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "Fixtures/avdmanager-list-device-v23.txt")
+        return try String(contentsOf: url, encoding: .utf8)
+            .split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+    }
+
+    @Test func keepsPhonesAndTabletsOnly() throws {
+        let profiles = HardwareProfile.parse(try fixture())
+        let ids = Set(profiles.map(\.id))
+        #expect(ids.isSuperset(of: ["pixel_10", "pixel_10_pro_fold", "pixel_9a", "pixel_tablet", "medium_phone"]))
+        #expect(!ids.contains("wearos_large_round"))
+        #expect(!ids.contains("automotive_1024p_landscape"))
+        #expect(!ids.contains { $0.hasPrefix("tv_") || $0.hasPrefix("desktop_") })
+    }
+
+    @Test func classifiesKinds() throws {
+        let profiles = Dictionary(uniqueKeysWithValues: HardwareProfile.parse(try fixture()).map { ($0.id, $0) })
+        #expect(profiles["pixel_10"]?.kind == .phone)
+        #expect(profiles["pixel_10_pro_fold"]?.kind == .foldable)
+        #expect(profiles["pixel_tablet"]?.kind == .tablet)
+        #expect(profiles["Nexus 9"]?.kind == .tablet)
+    }
+
+    @Test func popularIsTwoNewestPixelGenerationsPlusStaples() throws {
+        let grouped = HardwareProfile.grouped(HardwareProfile.parse(try fixture()))
+        #expect(grouped.popular.prefix(5).map(\.name) == ["Pixel 10", "Pixel 10 Pro", "Pixel 10 Pro XL", "Pixel 10 Pro Fold", "Pixel 10a"])
+        #expect(grouped.popular.contains { $0.id == "pixel_9" })
+        #expect(!grouped.popular.contains { $0.id == "pixel_8" })
+        #expect(grouped.popular.contains { $0.id == "pixel_tablet" })
+        #expect(grouped.popular.contains { $0.id == "medium_phone" })
+        #expect(grouped.others.first?.name == "Pixel 8")
+        #expect(Set(grouped.popular.map(\.id)).isDisjoint(with: grouped.others.map(\.id)))
+    }
+}

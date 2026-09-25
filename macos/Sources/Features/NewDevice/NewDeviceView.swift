@@ -33,16 +33,35 @@ struct NewDeviceView: View {
 
     private var hardwareSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Hardware").font(.headline)
-            if model.presets.isEmpty {
+            HStack {
+                Text("Hardware").font(.headline)
+                Spacer()
+                if !model.otherHardware.isEmpty {
+                    Toggle("Show all devices", isOn: $model.showAllHardware)
+                        .toggleStyle(.checkbox)
+                        .font(.callout)
+                }
+            }
+            if model.popularHardware.isEmpty {
                 ProgressView().controlSize(.small)
             } else {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 130), spacing: 10)], spacing: 10) {
-                    ForEach(model.presets) { preset in
-                        PresetCard(preset: preset, isSelected: model.preset == preset)
-                            .onTapGesture { model.preset = preset }
-                    }
+                hardwareGrid(model.popularHardware)
+                if model.showAllHardware {
+                    Text("More devices")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 4)
+                    hardwareGrid(model.otherHardware)
                 }
+            }
+        }
+    }
+
+    private func hardwareGrid(_ profiles: [HardwareProfile]) -> some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 130), spacing: 10)], spacing: 10) {
+            ForEach(profiles) { profile in
+                HardwareCard(profile: profile, isSelected: model.hardware == profile)
+                    .onTapGesture { model.hardware = profile }
             }
         }
     }
@@ -141,16 +160,16 @@ struct NewDeviceView: View {
     }
 }
 
-private struct PresetCard: View {
-    let preset: HardwarePreset
+private struct HardwareCard: View {
+    let profile: HardwareProfile
     let isSelected: Bool
 
     var body: some View {
         VStack(spacing: 8) {
-            Image(systemName: preset.symbolName)
+            Image(systemName: profile.symbolName)
                 .font(.system(size: 26))
                 .frame(height: 32)
-            Text(preset.name)
+            Text(profile.name)
                 .font(.callout)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)

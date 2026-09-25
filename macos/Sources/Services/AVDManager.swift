@@ -1,57 +1,31 @@
 import Foundation
 
-/// A hardware profile offered in the New Device wizard.
-struct HardwarePreset: Identifiable, Sendable, Hashable {
-    enum Kind: Sendable {
-        case phone, foldable, tablet
-    }
-
-    /// The avdmanager device id, e.g. `pixel_9`.
-    let id: String
-    let name: String
-    let kind: Kind
-
-    var symbolName: String {
-        switch kind {
-        case .phone: "smartphone"
-        case .foldable: "rectangle.portrait.split.2x1"
-        case .tablet: "ipad.landscape"
-        }
-    }
-
-    /// Newest first. Only the ones the installed avdmanager knows are shown.
-    static let all: [HardwarePreset] = [
-        HardwarePreset(id: "pixel_9_pro_xl", name: "Pixel 9 Pro XL", kind: .phone),
-        HardwarePreset(id: "pixel_9_pro", name: "Pixel 9 Pro", kind: .phone),
-        HardwarePreset(id: "pixel_9", name: "Pixel 9", kind: .phone),
-        HardwarePreset(id: "pixel_9_pro_fold", name: "Pixel 9 Pro Fold", kind: .foldable),
-        HardwarePreset(id: "pixel_8_pro", name: "Pixel 8 Pro", kind: .phone),
-        HardwarePreset(id: "pixel_8", name: "Pixel 8", kind: .phone),
-        HardwarePreset(id: "pixel_fold", name: "Pixel Fold", kind: .foldable),
-        HardwarePreset(id: "pixel_7_pro", name: "Pixel 7 Pro", kind: .phone),
-        HardwarePreset(id: "pixel_7", name: "Pixel 7", kind: .phone),
-        HardwarePreset(id: "medium_phone", name: "Medium Phone", kind: .phone),
-        HardwarePreset(id: "small_phone", name: "Small Phone", kind: .phone),
-        HardwarePreset(id: "pixel_tablet", name: "Pixel Tablet", kind: .tablet),
-        HardwarePreset(id: "medium_tablet", name: "Medium Tablet", kind: .tablet),
-    ]
-}
-
 /// Drives the SDK's `avdmanager` tool.
 struct AVDManager: Sendable {
     let executable: URL
     let sdkRoot: URL
     let javaHome: URL
 
+    init(executable: URL, sdkRoot: URL, javaHome: URL) {
+        self.executable = executable
+        self.sdkRoot = sdkRoot
+        self.javaHome = javaHome
+    }
+
+    init?(status: AndroidSDK.Status) {
+        guard let root = status.root, let javaHome = status.javaHome, let avdmanager = status.avdmanager else { return nil }
+        self.init(executable: avdmanager, sdkRoot: root, javaHome: javaHome)
+    }
+
     private var environment: [String: String] {
         let sdkPath = sdkRoot.path(percentEncoded: false)
         return ["JAVA_HOME": javaHome.path(percentEncoded: false), "ANDROID_HOME": sdkPath, "ANDROID_SDK_ROOT": sdkPath]
     }
 
-    /// Hardware profile ids this avdmanager knows (`avdmanager list device -c`).
-    func deviceIDs() async throws -> Set<String> {
-        let lines = try await ProcessRunner.run(executable, arguments: ["list", "device", "-c"], environment: environment)
-        return Set(lines.filter { !$0.hasPrefix("Warning") })
+    /// Phone and tablet hardware profiles this avdmanager knows.
+    func hardwareProfiles() async throws -> [HardwareProfile] {
+        let lines = try await ProcessRunner.run(executable, arguments: ["list", "device"], environment: environment)
+        return HardwareProfile.parse(lines)
     }
 
     func create(name: String, image: String, device: String) async throws {
@@ -62,6 +36,11 @@ struct AVDManager: Sendable {
             environment: environment,
             input: "no\n"
         )
+    }
+
+    /// Deletes the AVD's folder and its `.ini` pointer, including all its apps and data.
+    func delete(name: String) async throws {
+        try await ProcessRunner.run(executable, arguments: ["delete", "avd", "--name", name], environment: environment)
     }
 
     /// Turns a display name into a valid AVD name: letters, digits, `.`, `_` and `-` only.
