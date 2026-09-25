@@ -1,1 +1,3 @@
 .DS_Store
+# Release builds from scripts/release.sh
+build/
