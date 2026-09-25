@@ -35,6 +35,12 @@ struct NewDeviceView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("Hardware").font(.headline)
+                InfoButton(title: "What is Hardware?") {
+                    Text("The phone or tablet the emulator pretends to be: its screen size, resolution and shape.")
+                    Text("It doesn't change the Android version, and apps run the same on every choice. Pick one that matches the devices your users have, or a tablet or foldable to test those layouts.")
+                    Text("You can change RAM, storage and resolution later with Edit.")
+                        .foregroundStyle(.secondary)
+                }
                 Spacer()
                 if !model.otherHardware.isEmpty {
                     Toggle("Show all devices", isOn: $model.showAllHardware)
@@ -70,6 +76,15 @@ struct NewDeviceView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("Android version").font(.headline)
+                InfoButton(title: "What is the Android version?") {
+                    Text("The Android release the emulator runs. It's a separate download (a \"system image\", about 1–2 GB each) that you can reuse for any number of emulators.")
+                    Text("Choose the newest for current features, or an older one to test apps on older phones.")
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("**Google Play**: includes the Play Store. Best for most people.")
+                        Text("**Google APIs**: Google services without the Play Store, and you can get root access.")
+                        Text("**16 KB pages**: for testing apps with native code on newer devices.")
+                    }
+                }
                 Spacer()
                 Toggle("Show all image types", isOn: $model.showAllImageTypes)
                     .toggleStyle(.checkbox)
