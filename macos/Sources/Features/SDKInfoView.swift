@@ -45,20 +45,7 @@ struct SDKInfoView: View {
                 ToolRow(name: "adb", url: status.adb)
             }
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text("System images").font(.headline)
-                ForEach(status.systemImages, id: \.self) { path in
-                    if let image = SystemImage(path: path, isInstalled: true) {
-                        HStack(spacing: 6) {
-                            Text(image.title)
-                            Text("· \(image.tagDisplay)").foregroundStyle(.secondary)
-                        }
-                        .help(path)
-                    } else {
-                        Text(path).font(.callout.monospaced()).foregroundStyle(.secondary)
-                    }
-                }
-            }
+            AndroidVersionsSection(status: status)
 
             Divider()
             UpdatesSection(status: status)

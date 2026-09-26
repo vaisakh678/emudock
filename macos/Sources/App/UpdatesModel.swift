@@ -104,6 +104,14 @@ final class UpdatesModel {
         task?.cancel()
     }
 
+    /// Drops a package that was uninstalled, so it isn't offered as an update.
+    func forget(_ path: String) {
+        guard updates.contains(where: { $0.path == path }) else { return }
+        updates.removeAll { $0.path == path }
+        selection.remove(path)
+        save()
+    }
+
     private var reporter: StepProgress {
         { fraction, detail in
             Task { @MainActor in

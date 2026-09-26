@@ -87,4 +87,22 @@ enum AndroidSDK {
         }
         return images
     }
+
+    /// Where a package is installed, e.g. `system-images;android-36;google_apis;arm64-v8a`
+    /// → `<root>/system-images/android-36/google_apis/arm64-v8a/`.
+    static func directory(ofPackage path: String, in root: URL) -> URL {
+        path.split(separator: ";").reduce(root) { $0.appending(path: String($1), directoryHint: .isDirectory) }
+    }
+
+    /// Disk space used by the files under `directory`, in bytes.
+    static func size(of directory: URL, fileManager: FileManager = .default) -> Int64 {
+        let keys: Set<URLResourceKey> = [.totalFileAllocatedSizeKey, .isRegularFileKey]
+        guard let files = fileManager.enumerator(at: directory, includingPropertiesForKeys: Array(keys)) else { return 0 }
+        var total: Int64 = 0
+        for case let file as URL in files {
+            guard let values = try? file.resourceValues(forKeys: keys), values.isRegularFile == true else { continue }
+            total += Int64(values.totalFileAllocatedSize ?? 0)
+        }
+        return total
+    }
 }
