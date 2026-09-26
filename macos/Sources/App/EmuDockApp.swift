@@ -17,6 +17,16 @@ struct EmuDockApp: App {
                 .frame(minWidth: 720, minHeight: 360)
                 .task { await sdk.refresh() }
         }
+        .commands {
+            CommandGroup(replacing: .appInfo) {
+                Button("About EmuDock") { About.show() }
+            }
+            // Replaces the default "EmuDock Help" item, which has no help book to open.
+            CommandGroup(replacing: .help) {
+                Button("EmuDock on GitHub") { About.openRepository() }
+                Button("Report an Issue…") { About.openIssues() }
+            }
+        }
 
         MenuBarExtra("EmuDock", systemImage: "iphone.gen3") {
             MenuBarView()

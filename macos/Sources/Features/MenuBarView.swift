@@ -31,6 +31,9 @@ struct MenuBarView: View {
             openWindow(id: EmuDockApp.mainWindowID)
             NSApplication.shared.activate()
         }
+        Button("About EmuDock") { About.show() }
+        Button("EmuDock on GitHub") { About.openRepository() }
+        Divider()
         Button("Quit EmuDock") { NSApplication.shared.terminate(nil) }
             .keyboardShortcut("q")
     }
