@@ -49,6 +49,20 @@ struct AndroidSDKTests {
         #expect(AndroidSDK.installedSystemImages(in: root).isEmpty)
     }
 
+    @Test func measuresPackageFolder() throws {
+        let root = try makeSDK(files: [])
+        defer { try? FileManager.default.removeItem(at: root) }
+        let package = "system-images;android-36;google_apis;arm64-v8a"
+        let folder = AndroidSDK.directory(ofPackage: package, in: root)
+        #expect(folder.path(percentEncoded: false) == root.path(percentEncoded: false) + "system-images/android-36/google_apis/arm64-v8a/")
+
+        try FileManager.default.createDirectory(at: folder.appending(path: "data"), withIntermediateDirectories: true)
+        try Data(count: 100_000).write(to: folder.appending(path: "system.img"))
+        try Data(count: 50_000).write(to: folder.appending(path: "data/userdata.img"))
+        #expect(AndroidSDK.size(of: folder) >= 150_000)
+        #expect(AndroidSDK.size(of: root.appending(path: "missing")) == 0)
+    }
+
     private func makeSDK(files: [String]) throws -> URL {
         let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)

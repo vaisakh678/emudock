@@ -11,6 +11,8 @@ struct AVD: Identifiable, Sendable, Equatable {
     let tagDisplay: String?
     let deviceName: String?
     let screenSize: ScreenSize?
+    /// The system image package it runs, e.g. `system-images;android-36;google_apis_playstore;arm64-v8a`.
+    var systemImage: String? = nil
 
     struct ScreenSize: Sendable, Equatable {
         let width: Int
@@ -89,7 +91,8 @@ enum AVDCatalog {
             apiLevel: target.flatMap { $0.hasPrefix("android-") ? String($0.dropFirst("android-".count)) : nil },
             tagDisplay: imageTagDisplay(config) ?? config["tag.display"],
             deviceName: config["hw.device.name"],
-            screenSize: screenSize
+            screenSize: screenSize,
+            systemImage: imagePackage(config)
         )
     }
 
@@ -97,9 +100,15 @@ enum AVDCatalog {
     /// `system-images/android-37.0/google_apis_playstore_ps16k/arm64-v8a/`. The config's own
     /// `tag.display` is inconsistent ("Google APIs PlayStore") and omits the 16 KB variant.
     static func imageTagDisplay(_ config: [String: String]) -> String? {
+        imagePackage(config).flatMap { SystemImage(path: $0, isInstalled: true)?.tagDisplay }
+    }
+
+    /// The system image package path from the image folder in `image.sysdir.1`,
+    /// e.g. `system-images/android-36/google_apis/arm64-v8a/` → `system-images;android-36;google_apis;arm64-v8a`.
+    static func imagePackage(_ config: [String: String]) -> String? {
         guard let sysdir = config["image.sysdir.1"] else { return nil }
         let path = sysdir.split(separator: "/").joined(separator: ";")
-        return SystemImage(path: path, isInstalled: true)?.tagDisplay
+        return path.isEmpty ? nil : path
     }
 
     static func parseINI(_ text: String) -> [String: String] {

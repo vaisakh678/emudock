@@ -35,6 +35,10 @@ struct SDKManager: Sendable {
         }
     }
 
+    func uninstall(_ packages: [String]) async throws {
+        try await ProcessRunner.run(executable, arguments: [sdkRootArgument, "--uninstall"] + packages, environment: environment)
+    }
+
     /// Every package path sdkmanager lists, installed or available.
     func listPackages() async throws -> [String] {
         Self.packagePaths(inList: try await list())

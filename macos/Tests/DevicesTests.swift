@@ -40,6 +40,13 @@ struct AVDCatalogTests {
         #expect(AVDCatalog.imageTagDisplay([:]) == nil)
     }
 
+    @Test func imagePackageComesFromImageFolder() {
+        #expect(AVDCatalog.imagePackage(["image.sysdir.1": "system-images/android-36/google_apis_playstore/arm64-v8a/"])
+            == "system-images;android-36;google_apis_playstore;arm64-v8a")
+        #expect(AVDCatalog.imagePackage(["image.sysdir.1": ""]) == nil)
+        #expect(AVDCatalog.imagePackage([:]) == nil)
+    }
+
     @Test func fallsBackWhenConfigIsMissing() throws {
         let home = try temporaryFolder()
         defer { try? FileManager.default.removeItem(at: home) }
