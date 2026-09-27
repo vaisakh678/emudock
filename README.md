@@ -65,13 +65,18 @@ its `config.ini` in Finder, and ⓘ explanations for the confusing parts.
 
 ## Install
 
-> **Coming soon:** signed and notarized builds via Homebrew:
->
-> ```sh
-> brew install --cask vaisakh678/tap/emudock
-> ```
+With [Homebrew](https://brew.sh):
 
-Until then, you can [build from source](#build-from-source).
+```sh
+brew install --cask vaisakh678/tap/emudock
+```
+
+Or download `EmuDock-<version>.zip` from the
+[latest release](https://github.com/vaisakh678/emudock/releases/latest), unzip it and move
+EmuDock.app to Applications. Builds are signed with Developer ID and notarized by Apple.
+
+To update, run `brew upgrade --cask emudock`. You can also
+[build from source](#build-from-source).
 
 ### Requirements
 
@@ -159,7 +164,7 @@ scripts/
 
 ## Roadmap
 
-- [ ] Signed releases on Homebrew
+- [x] Signed releases on Homebrew
 - [ ] Automatic app updates
 - [ ] Choose a custom SDK folder
 - [ ] Wipe data, and drag and drop an APK to install it
