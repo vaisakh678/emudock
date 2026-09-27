@@ -145,8 +145,9 @@ Run the tests with:
 xcodebuild -project EmuDock.xcodeproj -scheme EmuDock -destination 'platform=macOS' test
 ```
 
-Release builds are signed and notarized with `scripts/release.sh <version>`; see the
-comments at the top of the script for the one-time setup.
+`scripts/release.sh <version>` builds a signed, notarized release, publishes it on GitHub
+and updates the Homebrew cask. See the comments at the top of the script for the options
+and the one-time setup.
 
 ### Project layout
 
@@ -159,7 +160,7 @@ macos/
 │   └── Services/      Wrappers around sdkmanager, avdmanager, emulator, adb and downloads
 └── Tests/             Unit tests (Swift Testing)
 scripts/
-└── release.sh         Build, sign, notarize and zip a release
+└── release.sh         Build, sign, notarize and publish a release
 ```
 
 ## Roadmap
